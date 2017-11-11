@@ -1,5 +1,6 @@
 package com.example.android.shushme;
 
+import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -42,35 +43,26 @@ public class MainActivity extends AppCompatActivity implements
         ConnectionCallbacks,
         OnConnectionFailedListener {
 
-    // Constants
     public static final String TAG = MainActivity.class.getSimpleName();
     private static final int PERMISSIONS_REQUEST_FINE_LOCATION = 111;
     private static final int PLACE_PICKER_REQUEST = 1;
 
-    // Member variables
     private PlaceListAdapter mAdapter;
     private RecyclerView mRecyclerView;
     private boolean mIsEnabled;
     private GoogleApiClient mClient;
     private Geofencing mGeofencing;
 
-    /**
-     * Called when the activity is starting
-     *
-     * @param savedInstanceState The Bundle that contains the data supplied in onSaveInstanceState
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Set up the recycler view
         mRecyclerView = (RecyclerView) findViewById(R.id.places_list_recycler_view);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mAdapter = new PlaceListAdapter(this, null);
         mRecyclerView.setAdapter(mAdapter);
 
-        // Initialize the switch state and Handle enable/disable switch change
         Switch onOffSwitch = (Switch) findViewById(R.id.enable_switch);
         mIsEnabled = getPreferences(MODE_PRIVATE).getBoolean(getString(R.string.setting_enabled), false);
         onOffSwitch.setChecked(mIsEnabled);
@@ -98,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements
         mGeofencing = new Geofencing(this, mClient);
 
     }
+
     @Override
     public void onConnected(@Nullable Bundle connectionHint) {
         refreshPlacesData();
@@ -108,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements
     public void onConnectionSuspended(int cause) {
         Log.i(TAG, "API Client Connection Suspended!");
     }
+
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult result) {
         Log.e(TAG, "API Client Connection Failed!");
@@ -139,11 +133,6 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
-    /***
-     * Button Click event handler to handle clicking the "Add new location" Button
-     *
-     * @param view
-     */
     public void onAddPlaceButtonClicked(View view) {
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -151,8 +140,7 @@ public class MainActivity extends AppCompatActivity implements
             return;
         }
         try {
-            // Start a new Activity for the Place Picker API, this will trigger {@code #onActivityResult}
-            // when a place is selected or with the user cancels.
+
             PlacePicker.IntentBuilder builder = new PlacePicker.IntentBuilder();
             Intent i = builder.build(this);
             startActivityForResult(i, PLACE_PICKER_REQUEST);
@@ -165,14 +153,6 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-
-    /***
-     * Called when the Place Picker Activity returns back with a selected place (or after canceling)
-     *
-     * @param requestCode The request code passed when calling startActivityForResult
-     * @param resultCode  The result code specified by the second activity
-     * @param data        The Intent that carries the result data.
-     */
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == PLACE_PICKER_REQUEST && resultCode == RESULT_OK) {
             Place place = PlacePicker.getPlace(this, data);
@@ -181,17 +161,14 @@ public class MainActivity extends AppCompatActivity implements
                 return;
             }
 
-            // Extract the place information from the API
             String placeName = place.getName().toString();
             String placeAddress = place.getAddress().toString();
             String placeID = place.getId();
 
-            // Insert a new place into DB
             ContentValues contentValues = new ContentValues();
             contentValues.put(PlaceContract.PlaceEntry.COLUMN_PLACE_ID, placeID);
             getContentResolver().insert(PlaceContract.PlaceEntry.CONTENT_URI, contentValues);
 
-            // Get live data information
             refreshPlacesData();
         }
     }
@@ -200,7 +177,6 @@ public class MainActivity extends AppCompatActivity implements
     public void onResume() {
         super.onResume();
 
-        // Initialize location permissions checkbox
         CheckBox locationPermissions = (CheckBox) findViewById(R.id.location_permission_checkbox);
         if (ActivityCompat.checkSelfPermission(MainActivity.this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -209,6 +185,20 @@ public class MainActivity extends AppCompatActivity implements
             locationPermissions.setChecked(true);
             locationPermissions.setEnabled(false);
         }
+
+        CheckBox ringerPermissions = (CheckBox) findViewById(R.id.ringer_permissions_checkbox);
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (android.os.Build.VERSION.SDK_INT >= 24 && !nm.isNotificationPolicyAccessGranted()) {
+            ringerPermissions.setChecked(false);
+        } else {
+            ringerPermissions.setChecked(true);
+            ringerPermissions.setEnabled(false);
+        }
+    }
+
+    public void onRingerPermissionsClicked(View view) {
+        Intent intent = new Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+        startActivity(intent);
     }
 
     public void onLocationPermissionClicked(View view) {
