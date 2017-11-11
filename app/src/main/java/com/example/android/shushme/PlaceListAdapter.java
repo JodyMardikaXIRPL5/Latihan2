@@ -7,11 +7,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.google.android.gms.location.places.PlaceBuffer;
+
 public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.PlaceViewHolder> {
 
     private Context mContext;
 
-    public PlaceListAdapter(Context context) {
+    public PlaceListAdapter(MainActivity mainActivity, Context context) {
         this.mContext = context;
     }
 
@@ -30,6 +32,10 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
     @Override
     public int getItemCount() {
         return 0;
+    }
+
+    public void swapPlaces(PlaceBuffer places) {
+
     }
 
     class PlaceViewHolder extends RecyclerView.ViewHolder {
